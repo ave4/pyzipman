@@ -50,23 +50,23 @@ class MainWindow(QMainWindow):
         self.toolbar = self.addToolBar('MainToolBar')
         self.toolbar.setMovable(False)
 
-        self.openAction = QAction(QIcon('document-open.png'), 'Open Archive', self)
+        self.openAction = QAction(QIcon('icons/document-open.png'), 'Open Archive', self)
         self.openAction.triggered.connect(self.open_file)
         self.toolbar.addAction(self.openAction)
 
-        self.extractAction = QAction(QIcon('insert-object.png'), 'Extract Archive', self)
+        self.extractAction = QAction(QIcon('icons/insert-object.png'), 'Extract Archive', self)
         self.extractAction.triggered.connect(self.extract_zip)
         self.toolbar.addAction(self.extractAction)
 
-        self.addAction = QAction(QIcon('list-add.png'), 'Add to Archive', self)
+        self.addAction = QAction(QIcon('icons/list-add.png'), 'Add to Archive', self)
         self.addAction.triggered.connect(self.add_to_archive)
         self.toolbar.addAction(self.addAction)
 
-        self.newAction = QAction(QIcon('document-new.png'), 'New Archive', self)
+        self.newAction = QAction(QIcon('icons/document-new.png'), 'New Archive', self)
         self.newAction.triggered.connect(self.create_new_archive)
         self.toolbar.addAction(self.newAction)
 
-        self.exitAction = QAction(QIcon('window-close.png'), 'Exit', self)
+        self.exitAction = QAction(QIcon('icons/window-close.png'), 'Exit', self)
         self.exitAction.triggered.connect(sys.exit)
         self.toolbar.addAction(self.exitAction)
 
