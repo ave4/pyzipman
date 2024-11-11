@@ -1,106 +1,139 @@
 #!/usr/bin/env python
 import sys
-#from PySide6.QtCore import *
-#from PySide6.QtWidgets import *
-from PyQt5.Qt import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem
+from PyQt5.QtCore import Qt, QStringListModel
 import zipfile
-
-new_file = None
-
-#class OpenFile(QDialog):
-#        def __init__(self, formats):
-#                super().__init__()
-#                self.fileName = QFileDialog.getOpenFileName(self,
-#    "Open Archive", "/home/", "ZIP Files (*.jar *.zip)"))
+import os
 
 class NoFile(QErrorMessage):
-        def  __init__(self):
-                super().__init__()
-                self.showMessage("ZIP-файл не открыт!", "warning")
+    def __init__(self):
+        super().__init__()
+        self.showMessage("ZIP-файл не открыт!", "warning")
 
 class ExtractDialog(QDialog):
-        def  __init__(self):
-                super().__init__()
-                self.setAutoFillBackground(True)
-                layout = QGridLayout()
-                layout.addWidget(QLabel("Путь распаковки"),0,0)
-                self.path_ext = QLineEdit("/")
-                layout.addWidget(self.path_ext, 1,0)
-                dir_button = QPushButton("Диалог")
-                layout.addWidget(dir_button, 1,1)
-                dir_button.clicked.connect(self.file_dia)
-                ext_button = QPushButton("Излечь файлы")
-                layout.addWidget(ext_button, 2,0)
-                ext_button.clicked.connect(self.extract_zip)
-                self.setLayout(layout)
-        def file_dia(self):
-                dir_path = QFileDialog.getExistingDirectory(None, "Путь распаковки архива", "", QFileDialog.ShowDirsOnly)
-                print(dir_path)
-                self.path_ext.setText(dir_path)
-        def extract_zip(self):
-                if (new_file and self.path_ext.text()):
-                        with zipfile.ZipFile(new_file, "r") as zf:
-                                zf.extractall(self.path_ext.text())
+    def __init__(self, archive_path):
+        super().__init__()
+        self.archive_path = archive_path
+        self.setAutoFillBackground(True)
+        layout = QGridLayout()
+        layout.addWidget(QLabel("Путь распаковки"), 0, 0)
+        self.path_ext = QLineEdit(os.getcwd())
+        layout.addWidget(self.path_ext, 1, 0)
+        dir_button = QPushButton("Диалог")
+        layout.addWidget(dir_button, 1, 1)
+        dir_button.clicked.connect(self.file_dia)
+        ext_button = QPushButton("Извлечь файлы")
+        layout.addWidget(ext_button, 2, 0)
+        ext_button.clicked.connect(self.extract_zip)
+        self.setLayout(layout)
+
+    def file_dia(self):
+        dir_path = QFileDialog.getExistingDirectory(self, "Путь распаковки архива", os.getcwd(), QFileDialog.ShowDirsOnly)
+        self.path_ext.setText(dir_path)
+
+    def extract_zip(self):
+        if self.archive_path and self.path_ext.text():
+            with zipfile.ZipFile(self.archive_path, "r") as zf:
+                zf.extractall(self.path_ext.text())
+            QMessageBox.information(self, "Успех", "Файлы успешно извлечены!")
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ZIP Manager")
+        self.setGeometry(100, 100, 600, 400)
 
         self.widget = QWidget()
         self.setCentralWidget(self.widget)
-        self.exitAction = QAction(QIcon('window-close.png'), 'Exit', self)
-        self.exitAction.triggered.connect(app.quit)
-        self.openAction = QAction(QIcon('document-open.png'), 'Open Archive', self)
-        self.extrAction = QAction(QIcon('insert-object.png'), 'Extract Archive', self)
-        self.addAction = QAction(QIcon('list-add.png'), 'Add to Archive', self)
-        self.openAction.triggered.connect(self.open_file)
-        self.extrAction.triggered.connect(self.extract_zip)
-        self.toolbar = self.addToolBar('Exit')
-        self.toolbar.setObjectName('toolbar')
-        #self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.toolbar)
+
+        self.toolbar = self.addToolBar('MainToolBar')
         self.toolbar.setMovable(False)
+
+        self.openAction = QAction(QIcon('document-open.png'), 'Open Archive', self)
+        self.openAction.triggered.connect(self.open_file)
         self.toolbar.addAction(self.openAction)
-        self.toolbar.addAction(self.extrAction)
+
+        self.extractAction = QAction(QIcon('insert-object.png'), 'Extract Archive', self)
+        self.extractAction.triggered.connect(self.extract_zip)
+        self.toolbar.addAction(self.extractAction)
+
+        self.addAction = QAction(QIcon('list-add.png'), 'Add to Archive', self)
+        self.addAction.triggered.connect(self.add_to_archive)
         self.toolbar.addAction(self.addAction)
+
+        self.newAction = QAction(QIcon('document-new.png'), 'New Archive', self)
+        self.newAction.triggered.connect(self.create_new_archive)
+        self.toolbar.addAction(self.newAction)
+
+        self.exitAction = QAction(QIcon('window-close.png'), 'Exit', self)
+        self.exitAction.triggered.connect(sys.exit)
         self.toolbar.addAction(self.exitAction)
+
         grid = QGridLayout(self.widget)
-        self.tree = QListView(self)
+        self.tree = QTreeView(self)
+        self.model = QStandardItemModel()
+        self.model.setHorizontalHeaderLabels(['Files'])
+        self.tree.setModel(self.model)
         grid.addWidget(self.tree)
-        self.w = None
-        
+
+        self.current_archive_path = None
 
     def open_file(self):
-        global new_file
-        new_file = QFileDialog.getOpenFileName(None, 'Выбрать zip-файл', '',
-                                               'ZIP Archive (*.zip *.jar);;Все файлы (*)')[0]
-        if (new_file):
-                with zipfile.ZipFile(new_file, "r") as zf:
-                        self.update_tree(zf.namelist())
-    def update_tree(self, zlist):
-        print(zlist)
-        self.model_1 = QStringListModel(self)
-        self.model_1.setStringList(zlist)
-        self.tree.setModel(self.model_1)
-        #tree = QTreeView
+        self.current_archive_path, _ = QFileDialog.getOpenFileName(self, 'Выбрать zip-файл', '', 'ZIP Archive (*.zip *.jar);;Все файлы (*)')
+        if self.current_archive_path:
+            self.update_tree()
+
+    def update_tree(self):
+        if not self.current_archive_path:
+            return
+        self.model.clear()
+        self.model.setHorizontalHeaderLabels(['Files'])
+        with zipfile.ZipFile(self.current_archive_path, "r") as zf:
+            for file_name in zf.namelist():
+                items = file_name.split('/')
+                parent = self.model.invisibleRootItem()
+                for item in items:
+                    if not item:
+                        continue
+                    found_items = [parent.child(i) for i in range(parent.rowCount()) if parent.child(i).text() == item]
+                    if found_items:
+                        parent = found_items[0]
+                    else:
+                        new_item = QStandardItem(item)
+                        parent.appendRow(new_item)
+                        parent = new_item
+
     def extract_zip(self):
-        #dlayout = QGridLayout()
-        #dlayout.addWidget(QLabel("Путь распаковки"), 0, 0)
-        #diawindow = QDialog()
-        #diawindow.setLayout(dlayout)
-        #self.w = ExtractDialog()
-        if self.w is None:
-                if new_file is None:
-                        eras = QErrorMessage(parent=self)
-                        eras.showMessage("ZIP-файл не открыт!", "warning")
-                else:
-                        self.w = ExtractDialog()
-                        self.w.show()
+        if not self.current_archive_path:
+            NoFile()
+        else:
+            dialog = ExtractDialog(self.current_archive_path)
+            dialog.exec_()
 
+    def add_to_archive(self):
+        if not self.current_archive_path:
+            NoFile()
+            return
+        files, _ = QFileDialog.getOpenFileNames(self, 'Выберите файлы для добавления в архив')
+        if files:
+            with zipfile.ZipFile(self.current_archive_path, 'a') as zf:
+                for file in files:
+                    zf.write(file, os.path.basename(file))
+            self.update_tree()
 
-if __name__ == "__main__":
+    def create_new_archive(self):
+        new_archive_path, _ = QFileDialog.getSaveFileName(self, 'Создать новый zip-файл', '', 'ZIP Archive (*.zip)')
+        if new_archive_path:
+            if not new_archive_path.endswith('.zip'):
+                new_archive_path += '.zip'
+            self.current_archive_path = new_archive_path
+            with zipfile.ZipFile(new_archive_path, 'w') as zf:
+                pass
+            self.update_tree()
+
+if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = MainWindow()
-    window.resize(800, 600)
     window.show()
     sys.exit(app.exec_())
